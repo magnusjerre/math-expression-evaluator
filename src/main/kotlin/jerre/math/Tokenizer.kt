@@ -5,7 +5,7 @@ internal val legalTokens = """\s+|\+|\-|\*|\/|\(|\)|\d+|\d+\.\d+""".toRegex()
 internal val numberRegex = """^(\d+|\d+.\d+)$""".toRegex()
 
 
-internal fun String.tokenify(): List<String> {
+internal fun String.tokenize(): List<String> {
     val matchResult: Sequence<MatchResult> = legalTokens.findAll(this) ?: throw IllegalArgumentException("Invalid pattern")
     return matchResult.toList().flatMap {  mr -> mr.groupValues.map { it.trim() } }.filterNot { "\\s*".toRegex().matches(it) }
 }
