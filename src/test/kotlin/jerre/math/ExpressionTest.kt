@@ -3,7 +3,7 @@ package jerre.math
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class NewMathTest {
+class ExpressionTest {
 
     @Test
     fun `1 + 1 should give 2`() {
@@ -67,4 +67,25 @@ class NewMathTest {
     fun `1 + 2 + 3 where 2 is replaced by 4 should give 8`() {
         assertEquals(8.0, "1 + 2 + 3".toMathematicalExpression().compute(mapOf(1 to 4.0)))
     }
+
+    @Test
+    fun `3 + -1 should give 2`() {
+        assertEquals(2.0, "3 + -1".toMathematicalExpression().compute())
+    }
+
+    @Test
+    fun `3-1 should give 2`() {
+        assertEquals(2.0, "3-1".toMathematicalExpression().compute())
+    }
+
+    @Test
+    fun `3--1 should give 4`() {
+        assertEquals(4.0, "3--1".toMathematicalExpression().compute())
+    }
+
+    @Test
+    fun `2,9 + -0,9 should give 2,0`() {
+        assertEquals(2.0, "2.9 + -0.9".toMathematicalExpression().compute())
+    }
+
 }

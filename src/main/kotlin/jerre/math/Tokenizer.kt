@@ -1,13 +1,28 @@
 package jerre.math
 
 
-internal val legalTokens = """\s+|\+|\-|\*|\/|\(|\)|\d+|\d+\.\d+""".toRegex()
-internal val numberRegex = """^(\d+|\d+.\d+)$""".toRegex()
-
+internal val numberRegex = """^\s*(-?\d+(?:\.\d+)?)""".toRegex()
+internal val nonNumbers = """^\s*(\+|-|\*|/|\(|\)|)""".toRegex()
 
 internal fun String.tokenize(): List<String> {
-    val matchResult: Sequence<MatchResult> = legalTokens.findAll(this) ?: throw IllegalArgumentException("Invalid pattern")
-    return matchResult.toList().flatMap {  mr -> mr.groupValues.map { it.trim() } }.filterNot { "\\s*".toRegex().matches(it) }
+    val tokens = mutableListOf<String>()
+    var startAtIndex = 0
+    while (startAtIndex < length) {
+        val rest = this.substring(startAtIndex)
+        val nextTokenResult = numberRegex.find(rest) ?: nonNumbers.find(rest)
+        val nextToken = nextTokenResult?.value?.trim() ?: ""
+
+        // The following happens if we omit spaces like so: 1-2, instead of writing 1 - 2.
+        // Since 1-2 will be interpreted as two numbers, we need special handling to convert it to 1 - 2
+        if (nextToken.isNumber() && nextToken.first() == '-' && tokens.lastOrNull()?.isNumber() == true) {
+            tokens.add("-")
+            tokens.add(nextToken.substring(1))
+        } else {
+            tokens.add(nextToken)
+        }
+        startAtIndex += nextTokenResult?.value?.length ?: length
+    }
+    return tokens
 }
 
 internal fun List<String>.replaceValuesWithIndexes(): List<String> {
