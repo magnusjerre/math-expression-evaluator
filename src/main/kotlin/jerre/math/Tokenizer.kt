@@ -2,6 +2,7 @@ package jerre.math
 
 
 internal val numberRegex = """^\s*(-?\d+(?:\.\d+)?)""".toRegex()
+internal val variableRegex = """^\s*(\w[\w\d]*)""".toRegex()
 internal val nonNumbers = """^\s*(\+|-|\*|/|\(|\)|)""".toRegex()
 
 internal fun String.tokenize(): List<String> {
@@ -9,7 +10,7 @@ internal fun String.tokenize(): List<String> {
     var startAtIndex = 0
     while (startAtIndex < length) {
         val rest = this.substring(startAtIndex)
-        val nextTokenResult = numberRegex.find(rest) ?: nonNumbers.find(rest)
+        val nextTokenResult = numberRegex.find(rest) ?: variableRegex.find(rest) ?: nonNumbers.find(rest)
         val nextToken = nextTokenResult?.value?.trim() ?: ""
 
         // The following happens if we omit spaces like so: 1-2, instead of writing 1 - 2.
@@ -29,7 +30,7 @@ internal fun List<String>.replaceValuesWithIndexes(): List<String> {
     var variableIndex = 0
     val output = mutableListOf<String>()
     for (i in 0 until size) {
-        if (this[i].isNumber()) {
+        if (this[i].isNumber() || this[i].isVariable()) {
             output.add("${variableIndex++}")
         } else {
             output.add(this[i])
@@ -58,6 +59,7 @@ internal fun List<String>.indexOfMatchingGroupClose(): Int {
 internal fun String.isGroupOpenToken(): Boolean = "(" == this
 internal fun String.isGroupCloseToken(): Boolean = ")" == this
 internal fun String.isNumber(): Boolean = numberRegex.matches(this)
+internal fun String.isVariable(): Boolean = variableRegex.matches(this)
 
 
 

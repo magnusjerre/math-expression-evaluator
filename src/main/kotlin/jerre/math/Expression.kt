@@ -9,7 +9,7 @@ internal fun List<String>.buildMathematicalExpressionTree(): MathematicalExpress
 }
 
 private fun List<String>.buildMathematicalExpressionTreeBasedOnValuesOnly(): MathematicalExpression {
-    if (isEmpty()) return ValueExpression(number = 0.0)
+    if (isEmpty()) return ValueExpression()
     if (size == 1) return ValueExpression(number = first().toDouble())
     if (size == 2) throw IllegalArgumentException("eh what? $this")
 
@@ -29,6 +29,8 @@ private fun List<String>.buildMathematicalExpressionTreeBasedOnValuesOnly(): Mat
         }
     } else if (current.isNumber()) {
         leftHand = ValueExpression(number = current.toDouble())
+    } else if (current.isVariable()) {
+        leftHand = ValueExpression(name = current)
     } else {
         throw IllegalArgumentException("hmmm")
     }
@@ -83,11 +85,13 @@ private fun MathematicalExpression.copyWithOriginalMathematicalExpressionValues(
 ): MathematicalExpression {
     when (this) {
         is ValueExpression -> {
-            val indexInt = number.toInt()
+            val indexInt = number?.toInt()
             val tokenIndex = indexValueTokens.indexOf("$indexInt")
+            val token = originalValueTokens[tokenIndex]
             return ValueExpression(
-                    number = originalValueTokens[tokenIndex].toDouble(),
-                    index = indexInt
+                    number = token.toDoubleOrNull(),
+                    name = if (token.isVariable()) token else null,
+                    index = indexInt ?: -1  // Should never be null
             )
         }
         is BinaryOperatorExpression -> {
