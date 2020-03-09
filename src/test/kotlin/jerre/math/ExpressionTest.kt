@@ -24,7 +24,6 @@ class ExpressionTest {
         assertEquals(2.0, expression.compute())
     }
 
-
     @Test
     fun `1 + (2 * 3) should give 2`() {
         val expression = "1 + (2 * 3)".toMathematicalExpression()
@@ -45,7 +44,6 @@ class ExpressionTest {
     @Test
     fun `(2 + 3) * (4 + 5) should give 45`() {
         val expression = "(2 + 3) * (4 + 5)".toMathematicalExpression()
-//        assertEquals(45.0, expression.compute())
         assertEquals(75.0, expression.compute(mapOf(
                 Mapping(index = 2) to 10.0
         )))
@@ -108,6 +106,28 @@ class ExpressionTest {
                 Mapping(name = "x1") to 2.0,
                 Mapping(name = "x2") to 3.0,
                 Mapping(name = "PI") to 3.14
+        )))
+    }
+
+    @Test
+    fun `2 ^ 3 should give 8`() {
+        assertEquals(8.0, "2 ^ 3".toMathematicalExpression().compute())
+    }
+
+    @Test
+    fun `2 * 3 ^ 4 should give 162`() {
+        assertEquals(162.0, "2 * 3 ^ 4".toMathematicalExpression().compute())
+    }
+
+    @Test
+    fun `2 ^ (1 - 2) should give 0,5`() {
+        assertEquals(0.5, "2 ^ (1 - 2)".toMathematicalExpression().compute())
+    }
+
+    @Test
+    fun `2 ^ x should give 8 for x = 3`() {
+        assertEquals(8.0, "2 ^ x".toMathematicalExpression().compute(mapOf(
+                Mapping(name = "x") to 3.0
         )))
     }
 

@@ -3,7 +3,7 @@ package jerre.math
 
 internal val numberRegex = """^\s*(-?\d+(?:\.\d+)?)""".toRegex()
 internal val variableRegex = """^\s*(\w[\w\d]*)""".toRegex()
-internal val nonNumbers = """^\s*(\+|-|\*|/|\(|\)|)""".toRegex()
+internal val nonNumbers = """^\s*([+\-*/()^])""".toRegex()
 
 internal fun String.tokenize(): List<String> {
     val tokens = mutableListOf<String>()

@@ -1,5 +1,7 @@
 package jerre.math
 
+import kotlin.math.pow
+
 interface MathematicalExpression {
     /**
      * [valueMap] If null, the original expression-number-value for the given index will be used,
@@ -32,6 +34,7 @@ data class BinaryOperatorExpression(
         val operator: BinaryOperator
 ) : MathematicalExpression {
     override fun compute(valueMap: Map<Mapping, Double>?): Double = when (operator) {
+        BinaryOperator.POWER -> left.compute(valueMap).pow(right.compute(valueMap))
         BinaryOperator.PLUS -> left.compute(valueMap) + right.compute(valueMap)
         BinaryOperator.MINUS -> left.compute(valueMap) - right.compute(valueMap)
         BinaryOperator.DIVIDE -> left.compute(valueMap) / right.compute(valueMap)

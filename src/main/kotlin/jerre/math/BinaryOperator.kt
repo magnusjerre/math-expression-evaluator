@@ -6,13 +6,14 @@ enum class BinaryOperator(
         val str: String,
         private val precedenceOrder: Int    // Lower value -> higher precedence
 ) {
+    POWER("^", 0),
     MULTIPLY("*", 1),
     DIVIDE("/", 1),
     PLUS("+", 2),
     MINUS("-", 2);
 
     /**
-     * If comparing two binary operators with the same precedence order, the [this]-binary-operator is considered
+     * If comparing two binary operators with the same precedence order, the this-binary-operator is considered
      * as having a higher precedence than the [other] binary operator.
      */
     fun hasPrecedenceOver(other: BinaryOperator): Boolean = precedenceOrder <= other.precedenceOrder
