@@ -3,6 +3,7 @@ package jerre.math
 
 internal val numberRegex = """^\s*(-?\d+(?:\.\d+)?)""".toRegex()
 internal val variableRegex = """^\s*(\w[\w\d]*)""".toRegex()
+internal val namedOperatorsRegex = """^\s*(abs|sqrt)""".toRegex(RegexOption.IGNORE_CASE)
 internal val nonNumbers = """^\s*([+\-*/()^])""".toRegex()
 
 internal fun String.tokenize(): List<String> {
@@ -59,7 +60,7 @@ internal fun List<String>.indexOfMatchingGroupClose(): Int {
 internal fun String.isGroupOpenToken(): Boolean = "(" == this
 internal fun String.isGroupCloseToken(): Boolean = ")" == this
 internal fun String.isNumber(): Boolean = numberRegex.matches(this)
-internal fun String.isVariable(): Boolean = variableRegex.matches(this)
+internal fun String.isVariable(): Boolean = !namedOperatorsRegex.matches(this) && variableRegex.matches(this)
 
 
 

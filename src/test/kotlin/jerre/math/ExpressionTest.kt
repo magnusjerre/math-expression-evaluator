@@ -50,6 +50,12 @@ class ExpressionTest {
     }
 
     @Test
+    fun `(2 + 1) * (1 + 1) ^ (3 - 1) should give 12`() {
+        val expression = "(2 + 1) * (1 + 1) ^ (3 - 1)".toMathematicalExpression()
+        assertEquals(12.0, expression.compute())
+    }
+
+    @Test
     fun `(2 + (3 + 3) * 2) * (10 div 5) should give 28`() {
         val expression = "(2 + (3 + 3) * 2) * (10 / 5)".toMathematicalExpression()
         assertEquals(28.0, expression.compute())
@@ -131,4 +137,28 @@ class ExpressionTest {
         )))
     }
 
+    @Test
+    fun `abs -1 should give 1`() {
+        assertEquals(1.0, "abs -1".toMathematicalExpression().compute())
+        assertEquals(1.0, "abs-1".toMathematicalExpression().compute())
+        assertEquals(1.0, "abs(-1)".toMathematicalExpression().compute())
+    }
+
+    @Test
+    fun `sqrt abs -4 should give 2`() {
+        assertEquals(2.0, "sqrt abs -4".toMathematicalExpression().compute())
+    }
+
+    @Test
+    fun `sqrt abs -4 + 2 should give 4`() {
+        assertEquals(4.0, "sqrt abs -4 + 2".toMathematicalExpression().compute())
+        assertEquals(4.0, "sqrt abs (-4) + 2".toMathematicalExpression().compute())
+        assertEquals(4.0, "sqrt(abs(-4)) + 2".toMathematicalExpression().compute())
+        assertEquals(4.0, "(sqrt(abs(-4))) + 2".toMathematicalExpression().compute())
+    }
+
+    @Test
+    fun `sqrt(abs(-2) + 14) * 2 should give 8`() {
+        assertEquals(8.0, "sqrt(abs(-2) + 14) * 2".toMathematicalExpression().compute())
+    }
 }
