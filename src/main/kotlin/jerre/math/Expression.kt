@@ -1,5 +1,7 @@
 package jerre.math
 
+import jerre.math.operators.*
+
 fun String.toMathematicalExpression(): MathematicalExpression = tokenize().buildMathematicalExpressionTree()
 
 internal fun List<String>.buildMathematicalExpressionTree(): MathematicalExpression {
@@ -13,141 +15,70 @@ private fun List<String>.buildMathematicalExpressionTreeBasedOnValuesOnly(): Mat
     if (size == 1) return ValueExpression(number = first().toDouble())
 
     val firstToken = first()
-    val secondToken = this[1]
 
-    when {
-        firstToken.isUnaryOperator() -> {
-            val unaryOperandResult =  first().toUnaryOperator().buildUnaryOperand(sublistOrNull(1)!!)
-            return unaryOperandResult.restOfTokens?.first()?.toBinaryOperator()?.buildBinary(
-                    leftHand = unaryOperandResult.operand,
-                    restOfTokens = unaryOperandResult.restOfTokens.sublistOrNull(1)!!
-            )?.operand ?: unaryOperandResult.operand
-        }
-        secondToken.isBinaryOperator() -> {
-            return secondToken.toBinaryOperator().buildBinary(
-                    leftHand = subList(0, 1).buildMathematicalExpressionTreeBasedOnValuesOnly(),
-                    restOfTokens = subList(2, size)).operand
-        }
-        firstToken.isGroupOpenToken() -> {
-            val leftGroupOperand = buildGroup()
-            return leftGroupOperand.restOfTokens?.first()?.toBinaryOperator()?.buildBinary(
-                    leftHand = leftGroupOperand.operand,
-                    restOfTokens = leftGroupOperand.restOfTokens.sublistOrNull(1)!!
-            )?.operand ?: leftGroupOperand.operand
-        }
-        else -> {
-            throw IllegalArgumentException("Woah, unexpected token! Got $firstToken")
-        }
+    val partialOperandResult = when {
+        firstToken.isUnaryOperator() -> firstToken.toUnaryOperator().buildUnaryOperationPartialResult(sublistOrNull(1)!!)
+        firstToken.isValue() -> buildValuePartialResult()
+        firstToken.isGroupOpenToken() -> buildGroupPartialResult()
+        else -> throw IllegalArgumentException("Woah, unexpected token! Got $firstToken")
     }
+
+    return partialOperandResult.restOfTokens?.first()?.toBinaryOperator()?.buildBinaryOperationPartialResult(
+            leftHand = partialOperandResult.operand,
+            restOfTokens = partialOperandResult.restOfTokens.sublistOrNull(1)!!
+    )?.operand ?: partialOperandResult.operand
 }
 
-private data class OperandResult(
+private data class PartialResult(
         val operand: MathematicalExpression,
         val restOfTokens: List<String>?
-)
-
-private fun String.isValue(): Boolean = isNumber() || isVariable()
-private fun String.toValueExpression(): MathematicalExpression = when {
-    this.isNumber() -> ValueExpression(number = this.toDouble())
-    this.isVariable() -> ValueExpression(name = this)
-    else -> throw IllegalArgumentException("Expected a number of variable, but got: $this")
+) {
+    val allTokensConsumed: Boolean = restOfTokens == null || restOfTokens.isEmpty()
 }
 
-private fun UnaryOperator.buildUnaryOperand(restOfTokens: List<String>): OperandResult {
-    if (restOfTokens.isEmpty()) throw IllegalArgumentException("Expected at least one token after the following unary operator: $this")
-    if (restOfTokens.size == 1) return OperandResult(
+private fun List<String>.nextPartialResultFromFirstToken(): PartialResult = when {
+    first().isValue() -> buildValuePartialResult()
+    first().isUnaryOperator() -> first().toUnaryOperator().buildUnaryOperationPartialResult(sublistOrNull(1)!!)
+    first().isGroupOpenToken() -> buildGroupPartialResult()
+    else -> throw IllegalArgumentException("Unexpected token after ${first()}")
+}
+
+private fun UnaryOperator.buildUnaryOperationPartialResult(restOfTokens: List<String>): PartialResult {
+    val partialResult: PartialResult = restOfTokens.nextPartialResultFromFirstToken()
+
+    return PartialResult(
             operand = UnaryOperatorExpression(
                     operator = this,
-                    operand = restOfTokens.buildValue().operand
+                    operand = partialResult.operand
             ),
-            restOfTokens = null
+            restOfTokens = partialResult.restOfTokens
     )
-
-    val firstToken = restOfTokens.first()
-    if (firstToken.isValue()) {
-        return OperandResult(
-                operand = UnaryOperatorExpression(
-                        operator = this,
-                        operand = firstToken.toValueExpression()
-                ),
-                restOfTokens = restOfTokens.sublistOrNull(1)
-        )
-    }
-
-    if (firstToken.isUnaryOperator()) {
-        val subOperatorExpression = firstToken.toUnaryOperator().buildUnaryOperand(restOfTokens.sublistOrNull(1)!!)  // We know there are at least two elements
-        return OperandResult(
-                operand = UnaryOperatorExpression(
-                        operator = this,
-                        operand = subOperatorExpression.operand
-                ),
-                restOfTokens = subOperatorExpression.restOfTokens
-        )
-    }
-
-    if (firstToken.isGroupOpenToken()) {
-        val group = restOfTokens.buildGroup()
-        return OperandResult(
-                operand = UnaryOperatorExpression(
-                        operator = this,
-                        operand = group.operand
-                ),
-                restOfTokens = group.restOfTokens
-        )
-    }
-
-    throw IllegalArgumentException("Unexpected token after ")
 }
 
-// Assumes the first element is "("
-private fun List<String>.buildGroup(): OperandResult {
+private fun List<String>.buildGroupPartialResult(): PartialResult {
     val groupCloseIndex = this.indexOfMatchingGroupClose()
-    return OperandResult(
+    return PartialResult(
             operand = sublistOrNull(1, groupCloseIndex)!!.buildMathematicalExpressionTreeBasedOnValuesOnly(),
             restOfTokens = sublistOrNull(groupCloseIndex + 1)
     )
 }
 
-private fun List<String>.buildValue(): OperandResult = OperandResult(
-        operand = first().toValueExpression(),
+private fun List<String>.buildValuePartialResult(): PartialResult = PartialResult(
+        operand = first().let {
+            when {
+                it.isNumber() -> ValueExpression(number = it.toDouble())
+                it.isVariable() -> ValueExpression(name = it)
+                else -> throw IllegalArgumentException("Expected a number of variable, but got: $this")
+            }
+        },
         restOfTokens = sublistOrNull(1)
 )
 
-private fun BinaryOperator.buildBinary(leftHand: MathematicalExpression, restOfTokens: List<String>): OperandResult {
-    if (restOfTokens.isEmpty()) throw IllegalArgumentException("Expected at least one token after the following unary operator: $this")
-    if (restOfTokens.size == 1) {
-        if (restOfTokens.first().isValue()) {
-            return OperandResult(
-                    operand = BinaryOperatorExpression(
-                            left = leftHand,
-                            operator = this,
-                            right = restOfTokens.first().toValueExpression()
-                    ),
-                    restOfTokens = null
-            )
-        } else {
-            throw IllegalArgumentException("Expected a value")
-        }
-    }
+private fun BinaryOperator.buildBinaryOperationPartialResult(leftHand: MathematicalExpression, restOfTokens: List<String>): PartialResult {
+    val rightOperandResult: PartialResult = restOfTokens.nextPartialResultFromFirstToken()
 
-    val firstToken = restOfTokens.first()
-    val rightOperandResult: OperandResult = when {
-        firstToken.isValue() -> {
-            restOfTokens.buildValue()
-        }
-        firstToken.isGroupOpenToken() -> {
-            restOfTokens.buildGroup()
-        }
-        firstToken.isUnaryOperator() -> {
-            firstToken.toUnaryOperator().buildUnaryOperand(restOfTokens.sublistOrNull(1)!!)
-        }
-        else -> {
-            throw IllegalArgumentException("Expected one of number, variable, group or unary operator, but got $firstToken")
-        }
-    }
-
-    if (rightOperandResult.restOfTokens == null) {
-        return OperandResult(
+    if (rightOperandResult.allTokensConsumed) {
+        return PartialResult(
                 operand = BinaryOperatorExpression(
                         left = leftHand,
                         operator = this,
@@ -156,29 +87,32 @@ private fun BinaryOperator.buildBinary(leftHand: MathematicalExpression, restOfT
                 restOfTokens = null
         )
     }
-    if (rightOperandResult.restOfTokens.first().isBinaryOperator()) {
-        val nextOperator = rightOperandResult.restOfTokens.first().toBinaryOperator()
-        return if (this.hasPrecedenceOver(nextOperator)) {
-            val higherPrecedenceOperation = BinaryOperatorExpression(
-                    left = leftHand,
-                    operator = this,
-                    right = rightOperandResult.operand
-            )
-            nextOperator.buildBinary(higherPrecedenceOperation, rightOperandResult.restOfTokens.sublistOrNull(1)!!)
-        } else {
-            val lowerPrecedenceOperation = nextOperator.buildBinary(rightOperandResult.operand, rightOperandResult.restOfTokens.sublistOrNull(1)!!)
-            OperandResult(
-                    operand = BinaryOperatorExpression(
-                            left = leftHand,
-                            operator = this,
-                            right = lowerPrecedenceOperation.operand
-                    ),
-                    restOfTokens = lowerPrecedenceOperation.restOfTokens
-            )
-        }
-    }
 
-    throw IllegalArgumentException("Eh...")
+    /**
+     * Do a look-ahead to determine operator precedence, eg. 2 * 3 + 4 or 2 + 3 * 4
+     * We always calculate the higher precedence first, then return the result of the lower precedence operation.
+     * Higher precedence: first compute the left hand side (2 * 3), then return the right hand side (left) + 4
+     * Lower precedence, first compute the right hand side (3 * 4), then return the left hand side 2 + (right)
+     */
+    val nextBinaryOperator = rightOperandResult.restOfTokens!!.first().toBinaryOperator()
+    return if (this.hasPrecedenceOver(nextBinaryOperator)) {
+        val higherPrecedenceOperation = BinaryOperatorExpression(
+                left = leftHand,
+                operator = this,
+                right = rightOperandResult.operand
+        )
+        nextBinaryOperator.buildBinaryOperationPartialResult(higherPrecedenceOperation, rightOperandResult.restOfTokens.sublistOrNull(1)!!)
+    } else {
+        val lowerPrecedenceOperation = nextBinaryOperator.buildBinaryOperationPartialResult(rightOperandResult.operand, rightOperandResult.restOfTokens.sublistOrNull(1)!!)
+        PartialResult(
+                operand = BinaryOperatorExpression(
+                        left = leftHand,
+                        operator = this,
+                        right = lowerPrecedenceOperation.operand
+                ),
+                restOfTokens = lowerPrecedenceOperation.restOfTokens
+        )
+    }
 }
 
 private fun MathematicalExpression.copyWithOriginalMathematicalExpressionValues(

@@ -1,17 +1,17 @@
-package jerre.math
+package jerre.math.operators
 
-interface Precedence {
+interface OperatorPrecedence {
     val precedenceOrder: Int
 
     /**
      * If comparing two binary operators with the same precedence order, the this-binary-operator is considered
      * as having a higher precedence than the [other] binary operator.
      */
-    fun hasPrecedenceOver(other: Precedence): Boolean = precedenceOrder <= other.precedenceOrder
+    fun hasPrecedenceOver(other: OperatorPrecedence): Boolean = precedenceOrder <= other.precedenceOrder
 }
 
 fun String.isOperator(): Boolean = isBinaryOperator() || isUnaryOperator()
-fun String.toPrecedence(): Precedence = when {
+fun String.toPrecedence(): OperatorPrecedence = when {
     isBinaryOperator() -> toBinaryOperator()
     isUnaryOperator() -> toUnaryOperator()
     else -> throw IllegalArgumentException("Not a precedence string, got: $this")

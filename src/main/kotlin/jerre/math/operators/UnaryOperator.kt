@@ -1,11 +1,11 @@
-package jerre.math
+package jerre.math.operators
 
 import java.lang.Exception
 
 enum class UnaryOperator(
         val str: String,
         override val precedenceOrder: Int    // Lower value -> hight precedence
-) : Precedence {
+) : OperatorPrecedence {
     ABS("abs", -1),
     SQRT("sqrt", -1);
 

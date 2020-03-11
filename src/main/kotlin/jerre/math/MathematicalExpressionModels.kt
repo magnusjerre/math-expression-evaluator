@@ -1,5 +1,7 @@
 package jerre.math
 
+import jerre.math.operators.BinaryOperator
+import jerre.math.operators.UnaryOperator
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt

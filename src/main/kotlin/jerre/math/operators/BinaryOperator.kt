@@ -1,11 +1,11 @@
-package jerre.math
+package jerre.math.operators
 
 import java.lang.Exception
 
 enum class BinaryOperator(
         val str: String,
         override val precedenceOrder: Int    // Lower value -> higher precedence
-) : Precedence {
+) : OperatorPrecedence {
     POWER("^", 0),
     MULTIPLY("*", 1),
     DIVIDE("/", 1),

@@ -61,6 +61,7 @@ internal fun String.isGroupOpenToken(): Boolean = "(" == this
 internal fun String.isGroupCloseToken(): Boolean = ")" == this
 internal fun String.isNumber(): Boolean = numberRegex.matches(this)
 internal fun String.isVariable(): Boolean = !namedOperatorsRegex.matches(this) && variableRegex.matches(this)
+internal fun String.isValue(): Boolean = isNumber() || isVariable()
 
 
 
