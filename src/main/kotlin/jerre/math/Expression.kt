@@ -83,8 +83,7 @@ private fun List<Token>.indexOfMatchingGroupClose(): Int {
 private fun List<Token>.buildValuePartialResult(): PartialResult = PartialResult(
         operand = first().let {
             when (it.type) {
-                TokenType.VALUE -> ValueExpression(number = it.str.toDouble())
-                TokenType.VARIABLE -> ValueExpression(name = it.str)
+                TokenType.VALUE, TokenType.VARIABLE -> ValueExpression(number = it.str.toDouble())
                 else -> throw IllegalArgumentException("Expected a number of variable, but got: $this")
             }
         },
