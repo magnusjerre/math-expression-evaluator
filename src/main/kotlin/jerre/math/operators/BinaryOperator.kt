@@ -4,13 +4,14 @@ import java.lang.Exception
 
 enum class BinaryOperator(
         val str: String,
+        val regex: Regex,
         override val precedenceOrder: Int    // Lower value -> higher precedence
 ) : OperatorPrecedence {
-    POWER("^", 0),
-    MULTIPLY("*", 1),
-    DIVIDE("/", 1),
-    PLUS("+", 2),
-    MINUS("-", 2);
+    POWER("^", """^\s*\^\s*""".toRegex(),0),
+    MULTIPLY("*", """^\s*\*\s*""".toRegex(), 1),
+    DIVIDE("/", """^\s*/\s*""".toRegex(), 1),
+    PLUS("+", """^\s*\+\s*""".toRegex(), 2),
+    MINUS("-", """^\s*-\s*""".toRegex(), 2);
 
     companion object {
         fun fromString(str: String): BinaryOperator =

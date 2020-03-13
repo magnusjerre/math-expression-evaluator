@@ -2,12 +2,12 @@ package jerre.math
 
 import jerre.math.operators.*
 
-fun String.toMathematicalExpression(): MathematicalExpression = tokenize().buildMathematicalExpressionTree()
+fun String.toMathematicalExpression(): MathematicalExpression = extractTokens().buildMathematicalExpressionTree()
 
-internal fun List<String>.buildMathematicalExpressionTree(): MathematicalExpression {
-    val indexValuedTokens = this.replaceValuesWithIndexes()
-    val expressionTreeWithIndexAsValues = indexValuedTokens.buildMathematicalExpressionTreeBasedOnValuesOnly()   // Contains only the indexes, not the original values
-    return expressionTreeWithIndexAsValues.copyWithOriginalMathematicalExpressionValues(originalValueTokens = this, indexValueTokens = indexValuedTokens)
+internal fun List<Token>.buildMathematicalExpressionTree(): MathematicalExpression {
+    val indexValueTokens = replaceTokenValuesWithIndexes()
+    val expressTreeWithIndexAsValuesAttribute =  indexValueTokens.asListOfStrTokens().buildMathematicalExpressionTreeBasedOnValuesOnly()
+    return expressTreeWithIndexAsValuesAttribute.copyWithOriginalMathematicalExpressionValues(originalValueTokens = asListOfStrTokens(), indexValueTokens = indexValueTokens.asListOfStrTokens())
 }
 
 private fun List<String>.buildMathematicalExpressionTreeBasedOnValuesOnly(): MathematicalExpression {
@@ -61,6 +61,23 @@ private fun List<String>.buildGroupPartialResult(): PartialResult {
             operand = sublistOrNull(1, groupCloseIndex)!!.buildMathematicalExpressionTreeBasedOnValuesOnly(),
             restOfTokens = sublistOrNull(groupCloseIndex + 1)
     )
+}
+
+private fun List<String>.indexOfMatchingGroupClose(): Int {
+    require(isNotEmpty())
+
+    var nUnMatchedGroupOpen = 1
+    for (i in 1 until size) {
+        if (this[i].isGroupCloseToken()) {
+            nUnMatchedGroupOpen--
+            if (nUnMatchedGroupOpen == 0) {
+                return i
+            }
+        } else if (this[i].isGroupOpenToken()) {
+            nUnMatchedGroupOpen++
+        }
+    }
+    return -1
 }
 
 private fun List<String>.buildValuePartialResult(): PartialResult = PartialResult(
