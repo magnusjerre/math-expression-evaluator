@@ -6,24 +6,24 @@ fun String.toMathematicalExpression(): MathematicalExpression = extractTokens().
 
 internal fun List<Token>.buildMathematicalExpressionTree(): MathematicalExpression {
     val indexValueTokens = replaceTokenValuesWithIndexes()
-    val expressTreeWithIndexAsValuesAttribute =  indexValueTokens.asListOfStrTokens().buildMathematicalExpressionTreeBasedOnValuesOnly()
-    return expressTreeWithIndexAsValuesAttribute.copyWithOriginalMathematicalExpressionValues(originalValueTokens = asListOfStrTokens(), indexValueTokens = indexValueTokens.asListOfStrTokens())
+    val expressTreeWithIndexAsValuesAttribute =  indexValueTokens.buildMathematicalExpressionTreeBasedOnValuesOnly()
+    return expressTreeWithIndexAsValuesAttribute.copyWithOriginalMathematicalExpressionValues(originalValueTokens = this, indexValueTokens = indexValueTokens)
 }
 
-private fun List<String>.buildMathematicalExpressionTreeBasedOnValuesOnly(): MathematicalExpression {
+private fun List<Token>.buildMathematicalExpressionTreeBasedOnValuesOnly(): MathematicalExpression {
     if (isEmpty()) return ValueExpression()
-    if (size == 1) return ValueExpression(number = first().toDouble())
+    if (size == 1) return ValueExpression(number = first().str.toDouble())
 
     val firstToken = first()
 
-    val partialOperandResult = when {
-        firstToken.isUnaryOperator() -> firstToken.toUnaryOperator().buildUnaryOperationPartialResult(sublistOrNull(1)!!)
-        firstToken.isValue() -> buildValuePartialResult()
-        firstToken.isGroupOpenToken() -> buildGroupPartialResult()
+    val partialOperandResult = when(firstToken.type) {
+        TokenType.UNARY_OPERATOR -> firstToken.str.toUnaryOperator().buildUnaryOperationPartialResult(sublistOrNull(1)!!)
+        TokenType.VALUE, TokenType.VARIABLE -> buildValuePartialResult()
+        TokenType.GROUP_OPEN -> buildGroupPartialResult()
         else -> throw IllegalArgumentException("Woah, unexpected token! Got $firstToken")
     }
 
-    return partialOperandResult.restOfTokens?.first()?.toBinaryOperator()?.buildBinaryOperationPartialResult(
+    return partialOperandResult.restOfTokens?.first()?.str?.toBinaryOperator()?.buildBinaryOperationPartialResult(
             leftHand = partialOperandResult.operand,
             restOfTokens = partialOperandResult.restOfTokens.sublistOrNull(1)!!
     )?.operand ?: partialOperandResult.operand
@@ -31,19 +31,19 @@ private fun List<String>.buildMathematicalExpressionTreeBasedOnValuesOnly(): Mat
 
 private data class PartialResult(
         val operand: MathematicalExpression,
-        val restOfTokens: List<String>?
+        val restOfTokens: List<Token>?
 ) {
     val allTokensConsumed: Boolean = restOfTokens == null || restOfTokens.isEmpty()
 }
 
-private fun List<String>.nextPartialResultFromFirstToken(): PartialResult = when {
-    first().isValue() -> buildValuePartialResult()
-    first().isUnaryOperator() -> first().toUnaryOperator().buildUnaryOperationPartialResult(sublistOrNull(1)!!)
-    first().isGroupOpenToken() -> buildGroupPartialResult()
+private fun List<Token>.nextPartialResultFromFirstToken(): PartialResult = when(first().type) {
+    TokenType.VARIABLE, TokenType.VALUE -> buildValuePartialResult()
+    TokenType.UNARY_OPERATOR -> first().str.toUnaryOperator().buildUnaryOperationPartialResult(sublistOrNull(1)!!)
+    TokenType.GROUP_OPEN -> buildGroupPartialResult()
     else -> throw IllegalArgumentException("Unexpected token after ${first()}")
 }
 
-private fun UnaryOperator.buildUnaryOperationPartialResult(restOfTokens: List<String>): PartialResult {
+private fun UnaryOperator.buildUnaryOperationPartialResult(restOfTokens: List<Token>): PartialResult {
     val partialResult: PartialResult = restOfTokens.nextPartialResultFromFirstToken()
 
     return PartialResult(
@@ -55,7 +55,7 @@ private fun UnaryOperator.buildUnaryOperationPartialResult(restOfTokens: List<St
     )
 }
 
-private fun List<String>.buildGroupPartialResult(): PartialResult {
+private fun List<Token>.buildGroupPartialResult(): PartialResult {
     val groupCloseIndex = this.indexOfMatchingGroupClose()
     return PartialResult(
             operand = sublistOrNull(1, groupCloseIndex)!!.buildMathematicalExpressionTreeBasedOnValuesOnly(),
@@ -63,35 +63,35 @@ private fun List<String>.buildGroupPartialResult(): PartialResult {
     )
 }
 
-private fun List<String>.indexOfMatchingGroupClose(): Int {
+private fun List<Token>.indexOfMatchingGroupClose(): Int {
     require(isNotEmpty())
 
     var nUnMatchedGroupOpen = 1
     for (i in 1 until size) {
-        if (this[i].isGroupCloseToken()) {
+        if (this[i].type == TokenType.GROUP_CLOSE) {
             nUnMatchedGroupOpen--
             if (nUnMatchedGroupOpen == 0) {
                 return i
             }
-        } else if (this[i].isGroupOpenToken()) {
+        } else if (this[i].type == TokenType.GROUP_OPEN) {
             nUnMatchedGroupOpen++
         }
     }
     return -1
 }
 
-private fun List<String>.buildValuePartialResult(): PartialResult = PartialResult(
+private fun List<Token>.buildValuePartialResult(): PartialResult = PartialResult(
         operand = first().let {
-            when {
-                it.isNumber() -> ValueExpression(number = it.toDouble())
-                it.isVariable() -> ValueExpression(name = it)
+            when (it.type) {
+                TokenType.VALUE -> ValueExpression(number = it.str.toDouble())
+                TokenType.VARIABLE -> ValueExpression(name = it.str)
                 else -> throw IllegalArgumentException("Expected a number of variable, but got: $this")
             }
         },
         restOfTokens = sublistOrNull(1)
 )
 
-private fun BinaryOperator.buildBinaryOperationPartialResult(leftHand: MathematicalExpression, restOfTokens: List<String>): PartialResult {
+private fun BinaryOperator.buildBinaryOperationPartialResult(leftHand: MathematicalExpression, restOfTokens: List<Token>): PartialResult {
     val rightOperandResult: PartialResult = restOfTokens.nextPartialResultFromFirstToken()
 
     if (rightOperandResult.allTokensConsumed) {
@@ -111,7 +111,7 @@ private fun BinaryOperator.buildBinaryOperationPartialResult(leftHand: Mathemati
      * Higher precedence: first compute the left hand side (2 * 3), then return the right hand side (left) + 4
      * Lower precedence, first compute the right hand side (3 * 4), then return the left hand side 2 + (right)
      */
-    val nextBinaryOperator = rightOperandResult.restOfTokens!!.first().toBinaryOperator()
+    val nextBinaryOperator = rightOperandResult.restOfTokens!!.first().str.toBinaryOperator()
     return if (this.hasPrecedenceOver(nextBinaryOperator)) {
         val higherPrecedenceOperation = BinaryOperatorExpression(
                 left = leftHand,
@@ -133,17 +133,17 @@ private fun BinaryOperator.buildBinaryOperationPartialResult(leftHand: Mathemati
 }
 
 private fun MathematicalExpression.copyWithOriginalMathematicalExpressionValues(
-        originalValueTokens: List<String>,
-        indexValueTokens: List<String>
+        originalValueTokens: List<Token>,
+        indexValueTokens: List<Token>
 ): MathematicalExpression {
     when (this) {
         is ValueExpression -> {
             val indexInt = number?.toInt()
-            val tokenIndex = indexValueTokens.indexOf("$indexInt")
+            val tokenIndex = indexValueTokens.indexOfFirst { it.str == "$indexInt" }
             val token = originalValueTokens[tokenIndex]
             return ValueExpression(
-                    number = token.toDoubleOrNull(),
-                    name = if (token.isVariable()) token else null,
+                    number = token.str.toDoubleOrNull(),
+                    name = if (token.type == TokenType.VARIABLE) token.str else null,
                     index = indexInt ?: -1  // Should never be null
             )
         }

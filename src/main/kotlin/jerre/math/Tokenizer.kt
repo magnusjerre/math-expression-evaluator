@@ -77,8 +77,6 @@ internal fun List<Token>.replaceTokenValuesWithIndexes(): List<Token> {
     }
 }
 
-internal fun List<Token>.asListOfStrTokens(): List<String> = map { it.str }
-
 private fun String.extractNextToken(legalTokens: List<LegalToken>): TokenizationResult? {
     for (legalToken in legalTokens) {
         val result: MatchResult? = legalToken.regex.find(this)
