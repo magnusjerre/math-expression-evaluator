@@ -6,18 +6,21 @@ import jerre.math.exceptions.UnexpectedTokenException
 internal fun String.extractTokens(): List<Token> {
     var nUnmatchedGroupOpeningOperators = 0
 
-    var currentToken: TokenizationResult = extractNextToken(TokenType.LEGAL_INITIAL_TOKENS)
+    var currentTokenResult: TokenizationResult = extractNextToken(TokenType.LEGAL_INITIAL_TOKENS)
             ?: throw UnexpectedTokenException(currentToken = null, indexOfNextToken = 0, entireString = this)
+    var valueVariableIndex = 0
+    var currentToken = currentTokenResult.toToken(if (currentTokenResult.isValueOrVariable()) valueVariableIndex++ else null)
 
-    if (currentToken.tokenType == TokenType.GROUP_OPEN) {
+    if (currentTokenResult.tokenType == TokenType.GROUP_OPEN) {
         nUnmatchedGroupOpeningOperators++
     }
-    val output = mutableListOf(currentToken.toToken())
-    var nextTokenIndexStart = currentToken.tokenMatch.length
+
+    val output = mutableListOf(currentToken)
+    var nextTokenIndexStart = currentTokenResult.tokenMatch.length
 
     while (nextTokenIndexStart < length) {
-        val nextToken = substring(nextTokenIndexStart).extractNextToken(currentToken.tokenType.legalTokens())
-                ?: throw UnexpectedTokenException(currentToken = currentToken.toToken(), indexOfNextToken = nextTokenIndexStart, entireString = this)
+        val nextToken = substring(nextTokenIndexStart).extractNextToken(currentTokenResult.tokenType.legalTokens())
+                ?: throw UnexpectedTokenException(currentToken = currentToken, indexOfNextToken = nextTokenIndexStart, entireString = this)
 
         if (nextToken.tokenType == TokenType.GROUP_OPEN) {
             nUnmatchedGroupOpeningOperators++
@@ -26,30 +29,20 @@ internal fun String.extractTokens(): List<Token> {
         if (nextToken.tokenType == TokenType.GROUP_CLOSE) {
             nUnmatchedGroupOpeningOperators--
             if (nUnmatchedGroupOpeningOperators < 0) {
-                throw UnexpectedTokenException(currentToken = currentToken.toToken(), indexOfNextToken = nextTokenIndexStart, entireString = this)
+                throw UnexpectedTokenException(currentToken = currentToken, indexOfNextToken = nextTokenIndexStart, entireString = this)
             }
         }
         if (nextToken.tokenType == TokenType.TERMINATION) {
             nextTokenIndexStart += 1
         } else {
-            output.add(nextToken.toToken())
+            currentToken = nextToken.toToken(if (nextToken.isValueOrVariable()) valueVariableIndex++ else null)
+            output.add(currentToken)
             nextTokenIndexStart += nextToken.tokenMatch.length
-            currentToken = nextToken
+            currentTokenResult = nextToken
         }
     }
 
     return output
-}
-
-internal fun List<Token>.replaceTokenValuesWithIndexes(): List<Token> {
-    var valueIndex = 0
-    return map {
-        if (it.type == TokenType.VALUE || it.type == TokenType.VARIABLE) {
-            it.copy(str = "${valueIndex++}")
-        } else {
-            it
-        }
-    }
 }
 
 private fun String.extractNextToken(legalTokens: List<LegalToken>): TokenizationResult? {
@@ -65,5 +58,6 @@ private data class TokenizationResult(
         val tokenType: TokenType
 ) {
     val result: String = tokenMatch.trim()
-    fun toToken(): Token = Token(result, tokenType)
+    fun toToken(valueVariableIndex: Int?): Token = Token(result,  valueVariableIndex, tokenType)
+    fun isValueOrVariable(): Boolean = tokenType == TokenType.VARIABLE || tokenType == TokenType.VALUE
 }

@@ -4,13 +4,7 @@ import jerre.math.operators.*
 
 fun String.toMathematicalExpression(): MathematicalExpression = extractTokens().buildMathematicalExpressionTree()
 
-internal fun List<Token>.buildMathematicalExpressionTree(): MathematicalExpression {
-    val indexValueTokens = replaceTokenValuesWithIndexes()
-    val expressTreeWithIndexAsValuesAttribute =  indexValueTokens.buildMathematicalExpressionTreeBasedOnValuesOnly()
-    return expressTreeWithIndexAsValuesAttribute.copyWithOriginalMathematicalExpressionValues(originalValueTokens = this, indexValueTokens = indexValueTokens)
-}
-
-private fun List<Token>.buildMathematicalExpressionTreeBasedOnValuesOnly(): MathematicalExpression {
+private fun List<Token>.buildMathematicalExpressionTree(): MathematicalExpression {
     if (isEmpty()) return ValueExpression()
     if (size == 1) return ValueExpression(number = first().str.toDouble())
 
@@ -58,7 +52,7 @@ private fun UnaryOperator.buildUnaryOperationPartialResult(restOfTokens: List<To
 private fun List<Token>.buildGroupPartialResult(): PartialResult {
     val groupCloseIndex = this.indexOfMatchingGroupClose()
     return PartialResult(
-            operand = sublistOrNull(1, groupCloseIndex)!!.buildMathematicalExpressionTreeBasedOnValuesOnly(),
+            operand = sublistOrNull(1, groupCloseIndex)!!.buildMathematicalExpressionTree(),
             restOfTokens = sublistOrNull(groupCloseIndex + 1)
     )
 }
@@ -83,7 +77,8 @@ private fun List<Token>.indexOfMatchingGroupClose(): Int {
 private fun List<Token>.buildValuePartialResult(): PartialResult = PartialResult(
         operand = first().let {
             when (it.type) {
-                TokenType.VALUE, TokenType.VARIABLE -> ValueExpression(number = it.str.toDouble())
+                TokenType.VALUE -> ValueExpression(number = it.str.toDouble(), name = it.indexForValueOrVariable!!.toString(), index = it.indexForValueOrVariable)
+                TokenType.VARIABLE -> ValueExpression(number = null, name = it.str, index = it.indexForValueOrVariable!!)
                 else -> throw IllegalArgumentException("Expected a number of variable, but got: $this")
             }
         },
@@ -130,38 +125,3 @@ private fun BinaryOperator.buildBinaryOperationPartialResult(leftHand: Mathemati
         )
     }
 }
-
-private fun MathematicalExpression.copyWithOriginalMathematicalExpressionValues(
-        originalValueTokens: List<Token>,
-        indexValueTokens: List<Token>
-): MathematicalExpression {
-    when (this) {
-        is ValueExpression -> {
-            val indexInt = number?.toInt()
-            val tokenIndex = indexValueTokens.indexOfFirst { it.str == "$indexInt" }
-            val token = originalValueTokens[tokenIndex]
-            return ValueExpression(
-                    number = token.str.toDoubleOrNull(),
-                    name = if (token.type == TokenType.VARIABLE) token.str else null,
-                    index = indexInt ?: -1  // Should never be null
-            )
-        }
-        is BinaryOperatorExpression -> {
-            return BinaryOperatorExpression(
-                    left = left.copyWithOriginalMathematicalExpressionValues(originalValueTokens, indexValueTokens),
-                    right = right.copyWithOriginalMathematicalExpressionValues(originalValueTokens, indexValueTokens),
-                    operator = operator
-            )
-        }
-        is UnaryOperatorExpression -> {
-            return UnaryOperatorExpression(
-                    operand = operand.copyWithOriginalMathematicalExpressionValues(originalValueTokens, indexValueTokens),
-                    operator = operator
-            )
-        }
-        else -> {
-            throw IllegalArgumentException("Hm, this is unexpected")
-        }
-    }
-}
-

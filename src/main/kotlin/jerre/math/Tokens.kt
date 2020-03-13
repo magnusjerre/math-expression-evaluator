@@ -13,6 +13,16 @@ private val variableToken = LegalToken("variable", """^\s*(\w[\w\d]*)""".toRegex
 
 data class Token(
         val str: String,
+        /**
+         * Indicates the index of the value or variable in the expression for substitution by index.
+         * Is {null} for non-value and non-variable tokens.
+         * Example: x + 10 - y ^ 2
+         * x-index: 0
+         * 10-index: 1
+         * y-index: 2
+         * 2-index: 3
+         */
+        val indexForValueOrVariable: Int? = null,
         val type: TokenType
 )
 
