@@ -161,4 +161,19 @@ class ExpressionTest {
     fun `sqrt(abs(-2) + 14) * 2 should give 8`() {
         assertEquals(8.0, "sqrt(abs(-2) + 14) * 2".toMathematicalExpression().compute())
     }
+
+    @Test
+    fun `sqrt(-1) should give NaN`() {
+        assertEquals(Double.NaN, "sqrt(-1)".toMathematicalExpression().compute())
+    }
+
+    @Test
+    fun `2 div 0 should give infinity`() {
+        assertEquals(Double.POSITIVE_INFINITY, "2 / 0".toMathematicalExpression().compute())
+    }
+
+    @Test
+    fun `2 div 0 * -1 should give negative infinity`() {
+        assertEquals(Double.NEGATIVE_INFINITY, "2 / 0 * -1".toMathematicalExpression().compute())
+    }
 }

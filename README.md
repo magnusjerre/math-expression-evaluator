@@ -73,3 +73,9 @@ Each operand is assigned an index, starting a 0 and increasing from left to righ
 // The Mapping-class specifies which operand that should be mapped
 data class Mapping(val name: String? = null, val index: Int? = null)
 ``` 
+
+# Edge / Error cases
+## Dividing by zero
+Dividing something by 0 will result in infinity
+## Sqrt(negative number)
+Calculating the square root of a negative number returns NaN
