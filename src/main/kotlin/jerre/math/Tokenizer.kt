@@ -22,6 +22,7 @@ private val legalTokensFollowingBinaryOperator = unaryOperatorTokens + listOf(gr
 private val legalTokensFollowingGroupOpenToken = unaryOperatorTokens + listOf(groupOpenToken, numberToken, variableToken) + binaryOperatorTokens
 private val legalTokensFollowingGroupCloseToken = binaryOperatorTokens + listOf(groupCloseToken, terminationToken)
 
+@Throws(UnexpectedTokenException::class)
 internal fun String.extractTokens(): List<Token> {
     var nUnmatchedGroupOpeningOperators = 0
 
@@ -45,7 +46,7 @@ internal fun String.extractTokens(): List<Token> {
         if (nextToken.tokenType == TokenType.GROUP_CLOSE) {
             nUnmatchedGroupOpeningOperators--
             if (nUnmatchedGroupOpeningOperators < 0) {
-                throw IllegalArgumentException("Illegal group closing token at index $nextTokenIndexStart")
+                throw UnexpectedTokenException(currentToken = currentToken.toToken(), indexOfNextToken = nextTokenIndexStart, entireString = this)
             }
         }
         if (nextToken.tokenType == TokenType.TERMINATION) {
