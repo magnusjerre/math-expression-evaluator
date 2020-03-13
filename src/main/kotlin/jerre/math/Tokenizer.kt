@@ -1,11 +1,11 @@
 package jerre.math
 
+import jerre.math.exceptions.UnexpectedTokenException
 import jerre.math.operators.BinaryOperator
 import jerre.math.operators.UnaryOperator
 
 internal val numberRegex = """^\s*(-?\d+(?:\.\d+)?)""".toRegex()
 internal val variableRegex = """^\s*(\w[\w\d]*)""".toRegex()
-internal val namedOperatorsRegex = """^\s*(abs|sqrt)""".toRegex(RegexOption.IGNORE_CASE)
 private val terminationToken = LegalToken("", "^$".toRegex(),  TokenType.TERMINATION)
 private val groupOpenToken = LegalToken("(", """^\s*\(\s*""".toRegex(), TokenType.GROUP_OPEN)
 private val groupCloseToken = LegalToken(")", """^\s*\)\s*""".toRegex(), TokenType.GROUP_CLOSE)
@@ -25,7 +25,9 @@ private val legalTokensFollowingGroupCloseToken = binaryOperatorTokens + listOf(
 internal fun String.extractTokens(): List<Token> {
     var nUnmatchedGroupOpeningOperators = 0
 
-    var currentToken: TokenizationResult = extractNextToken(legalInitialTokens)!!
+    var currentToken: TokenizationResult = extractNextToken(legalInitialTokens)
+            ?: throw UnexpectedTokenException(currentToken = null, indexOfNextToken = 0, entireString = this)
+
     if (currentToken.tokenType == TokenType.GROUP_OPEN) {
         nUnmatchedGroupOpeningOperators++
     }
@@ -33,7 +35,7 @@ internal fun String.extractTokens(): List<Token> {
     var nextTokenIndexStart = currentToken.tokenMatch.length
 
     while (nextTokenIndexStart < length) {
-        val nextToken = substring(nextTokenIndexStart).extractNextToken(currentToken.tokenType.legaltokens())
+        val nextToken = substring(nextTokenIndexStart).extractNextToken(currentToken.tokenType.legalTokens())
                 ?: throw UnexpectedTokenException(currentToken = currentToken.toToken(), indexOfNextToken = nextTokenIndexStart, entireString = this)
 
         if (nextToken.tokenType == TokenType.GROUP_OPEN) {
@@ -58,14 +60,6 @@ internal fun String.extractTokens(): List<Token> {
     return output
 }
 
-internal class UnexpectedTokenException(
-        val currentToken: Token?,
-        val indexOfNextToken: Int,
-        val entireString: String
-) : RuntimeException(
-        "Unexpected token at $indexOfNextToken. Expected on of ${currentToken?.type?.legaltokens()?.asString()}, but got ${entireString.substring(indexOfNextToken)}"
-)
-
 internal fun List<Token>.replaceTokenValuesWithIndexes(): List<Token> {
     var valueIndex = 0
     return map {
@@ -85,7 +79,7 @@ private fun String.extractNextToken(legalTokens: List<LegalToken>): Tokenization
     return null
 }
 
-internal data class Token(
+data class Token(
         val str: String,
         val type: TokenType
 )
@@ -98,15 +92,15 @@ private data class TokenizationResult(
     fun toToken(): Token = Token(result, tokenType)
 }
 
-internal data class LegalToken(
-        val basePattern: String,
+data class LegalToken(
+        val prettyToken: String,
         val regex: Regex,
         val type: TokenType
 )
 
-internal enum class TokenType {
+enum class TokenType {
     VALUE, VARIABLE, GROUP_OPEN, GROUP_CLOSE, BINARY_OPERATOR, UNARY_OPERATOR, TERMINATION;
-    internal fun legaltokens(): List<LegalToken> = when (this) {
+    fun legalTokens(): List<LegalToken> = when (this) {
         VALUE -> legalTokensFollowingNumber
         VARIABLE -> legalTokensFollowingVariable
         GROUP_OPEN -> legalTokensFollowingGroupOpenToken
@@ -116,11 +110,3 @@ internal enum class TokenType {
         TERMINATION -> emptyList()
     }
 }
-
-private fun List<LegalToken>.asString(): String = joinToString(prefix = "[", postfix = "]") { it.basePattern }
-
-internal fun String.isGroupOpenToken(): Boolean = "(" == this
-internal fun String.isGroupCloseToken(): Boolean = ")" == this
-internal fun String.isNumber(): Boolean = numberRegex.matches(this)
-internal fun String.isVariable(): Boolean = !namedOperatorsRegex.matches(this) && variableRegex.matches(this)
-internal fun String.isValue(): Boolean = isNumber() || isVariable()
