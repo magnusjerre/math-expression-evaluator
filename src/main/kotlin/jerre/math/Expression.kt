@@ -1,20 +1,26 @@
 package jerre.math
 
-import jerre.math.operators.*
+import jerre.math.exceptions.ExpressionBuilderException
+import jerre.math.exceptions.MathException
+import jerre.math.operators.BinaryOperator
+import jerre.math.operators.UnaryOperator
+import jerre.math.operators.toBinaryOperator
+import jerre.math.operators.toUnaryOperator
+import java.rmi.UnexpectedException
 
+@Throws(MathException::class)
 fun String.toMathematicalExpression(): MathematicalExpression = extractTokens().buildMathematicalExpressionTree()
 
 private fun List<Token>.buildMathematicalExpressionTree(): MathematicalExpression {
     if (isEmpty()) return ValueExpression()
-    if (size == 1) return ValueExpression(number = first().str.toDouble())
 
     val firstToken = first()
 
-    val partialOperandResult = when(firstToken.type) {
+    val partialOperandResult = when (firstToken.type) {
         TokenType.UNARY_OPERATOR -> firstToken.str.toUnaryOperator().buildUnaryOperationPartialResult(sublistOrNull(1)!!)
         TokenType.VALUE, TokenType.VARIABLE -> buildValuePartialResult()
         TokenType.GROUP_OPEN -> buildGroupPartialResult()
-        else -> throw IllegalArgumentException("Woah, unexpected token! Got $firstToken")
+        else -> throw ExpressionBuilderException("Unexpected token! Got $firstToken")
     }
 
     return partialOperandResult.restOfTokens?.first()?.str?.toBinaryOperator()?.buildBinaryOperationPartialResult(
@@ -30,11 +36,11 @@ private data class PartialResult(
     val allTokensConsumed: Boolean = restOfTokens == null || restOfTokens.isEmpty()
 }
 
-private fun List<Token>.nextPartialResultFromFirstToken(): PartialResult = when(first().type) {
+private fun List<Token>.nextPartialResultFromFirstToken(): PartialResult = when (first().type) {
     TokenType.VARIABLE, TokenType.VALUE -> buildValuePartialResult()
     TokenType.UNARY_OPERATOR -> first().str.toUnaryOperator().buildUnaryOperationPartialResult(sublistOrNull(1)!!)
     TokenType.GROUP_OPEN -> buildGroupPartialResult()
-    else -> throw IllegalArgumentException("Unexpected token after ${first()}")
+    else -> throw ExpressionBuilderException("Unexpected token after ${first()}")
 }
 
 private fun UnaryOperator.buildUnaryOperationPartialResult(restOfTokens: List<Token>): PartialResult {
@@ -79,7 +85,7 @@ private fun List<Token>.buildValuePartialResult(): PartialResult = PartialResult
             when (it.type) {
                 TokenType.VALUE -> ValueExpression(number = it.str.toDouble(), name = it.indexForValueOrVariable!!.toString(), index = it.indexForValueOrVariable)
                 TokenType.VARIABLE -> ValueExpression(number = null, name = it.str, index = it.indexForValueOrVariable!!)
-                else -> throw IllegalArgumentException("Expected a number of variable, but got: $this")
+                else -> throw UnexpectedException("Expected a number of variable token, but got: $this")
             }
         },
         restOfTokens = sublistOrNull(1)
